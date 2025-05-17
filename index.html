@@ -24,26 +24,37 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       max-width: 800px;
     }
-    .sentence:hover {
-      background-color: #e0f7fa;
-      cursor: pointer;
+    .sentence-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
     }
-    .game-container {
+    .sentence {
+      flex-grow: 1;
+      margin: 0;
+    }
+    .speak-btn {
+      margin-left: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .sortable {
       display: flex;
       flex-wrap: wrap;
-      justify-content: space-around;
-    }
-    .word-card {
-      background-color: #fafafa;
-      border: 1px solid #ccc;
+      gap: 10px;
       padding: 10px;
-      margin: 5px;
-      border-radius: 10px;
-      cursor: pointer;
+      border: 1px dashed #aaa;
+      min-height: 40px;
+      background-color: #fafafa;
+      border-radius: 8px;
     }
-    .matched {
-      background-color: #c8e6c9;
-      border-color: #388e3c;
+    .sortable div {
+      background-color: #e0f7fa;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: grab;
     }
   </style>
 </head>
@@ -63,16 +74,7 @@
 
   <div class="lesson" id="lessonContainer" style="display:none;">
     <h2>Danish Short Story</h2>
-    <div id="story">
-      <!-- Sentences will be loaded here -->
-    </div>
-  </div>
-
-  <div class="game" id="gameContainer" style="display:none;">
-    <h2>Match the Translation</h2>
-    <div class="game-container" id="matchGame">
-      <!-- Matching game will appear here -->
-    </div>
+    <div id="story"></div>
   </div>
 
   <script>
@@ -97,85 +99,83 @@
     function loadLesson() {
       const level = document.getElementById('levelSelect').value;
       const storyContainer = document.getElementById('story');
-      const gameContainer = document.getElementById('matchGame');
       storyContainer.innerHTML = '';
-      gameContainer.innerHTML = '';
+
       const lesson = lessons[level];
       document.getElementById('lessonContainer').style.display = 'block';
-      document.getElementById('gameContainer').style.display = 'block';
 
-      const englishWords = [];
+      lesson.forEach(({ danish, english }) => {
+        // Sentence + button
+        const container = document.createElement('div');
+        container.className = 'sentence-container';
 
-      lesson.forEach(({ danish, english }, index) => {
         const sentence = document.createElement('p');
         sentence.className = 'sentence';
         sentence.textContent = danish;
-        sentence.dataset.speak = danish;
-        sentence.onmouseover = () => speakDanish(danish);
-        storyContainer.appendChild(sentence);
 
-        danish.split(' ').forEach((word, i) => {
-          const wordId = `d-${index}-${i}`;
-          const engWord = english.split(' ')[i] || "";
-          englishWords.push({ danish: word, english: engWord, id: wordId });
+        const button = document.createElement('button');
+        button.className = 'speak-btn';
+        button.innerHTML = '🔊';
+        button.onclick = () => speakDanish(danish);
+
+        container.appendChild(sentence);
+        container.appendChild(button);
+        storyContainer.appendChild(container);
+
+        // Sorting Game
+        const sortable = document.createElement('div');
+        sortable.className = 'sortable';
+        sortable.setAttribute('draggable', 'true');
+
+        const words = english.split(' ');
+        const shuffled = [...words].sort(() => 0.5 - Math.random());
+
+        shuffled.forEach(word => {
+          const w = document.createElement('div');
+          w.textContent = word;
+          w.draggable = true;
+          w.ondragstart = e => e.dataTransfer.setData('text/plain', e.target.textContent);
+          w.ondrop = e => {
+            e.preventDefault();
+            const draggedText = e.dataTransfer.getData('text/plain');
+            const currentText = e.target.textContent;
+            e.target.textContent = draggedText;
+            const dragEl = [...sortable.children].find(el => el.textContent === draggedText && el !== e.target);
+            if (dragEl) dragEl.textContent = currentText;
+          };
+          w.ondragover = e => e.preventDefault();
+          sortable.appendChild(w);
         });
-      });
 
-      // Shuffle and display matching game
-      const shuffled = [...englishWords].sort(() => 0.5 - Math.random());
-      shuffled.forEach(({ english, id }) => {
-        const card = document.createElement('div');
-        card.className = 'word-card';
-        card.textContent = english;
-        card.onclick = () => matchWord(card, id);
-        card.dataset.match = id;
-        gameContainer.appendChild(card);
+        storyContainer.appendChild(sortable);
       });
     }
 
     function speakDanish(text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'da-DK';
+
+      const voices = window.speechSynthesis.getVoices();
+      const danishVoices = voices.filter(v => v.lang.startsWith('da') && (
+        v.name.toLowerCase().includes('female') ||
+        v.name.toLowerCase().includes('karen') ||
+        v.name.toLowerCase().includes('ida')
+      ));
+      const fallback = voices.find(v => v.lang.startsWith('da'));
+
+      if (danishVoices.length > 0) {
+        utterance.voice = danishVoices[0];
+      } else if (fallback) {
+        utterance.voice = fallback;
+      }
+
+      speechSynthesis.cancel();
       speechSynthesis.speak(utterance);
     }
 
-    let selectedCard = null;
-
-    function matchWord(card, id) {
-      if (!selectedCard) {
-        selectedCard = card;
-        card.style.backgroundColor = '#ffe082';
-      } else {
-        if (selectedCard.dataset.match === id) {
-          selectedCard.classList.add('matched');
-          card.classList.add('matched');
-        }
-        selectedCard.style.backgroundColor = '';
-        selectedCard = null;
-      }
-    }
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
   </script>
 </body>
 </html>
-
-<!-- This HTML document provides a simple Danish learning tool with an assessment, lesson, and matching game. 
-     The user can select their level, read sentences in Danish, and play a game to match Danish words with their English translations. -->
-<!-- The JavaScript code handles loading lessons, speaking Danish sentences, and matching words in the game.
-     The CSS styles ensure a clean and user-friendly interface. -->
-<!-- The tool is designed to be interactive and engaging, making language learning fun and effective. -->
-<!-- The lessons are structured to gradually increase in complexity, catering to different proficiency levels. -->
-<!-- The game encourages users to actively participate and reinforces their learning through practice. -->
-<!-- The use of speech synthesis allows users to hear the correct pronunciation, enhancing their listening skills. -->
-<!-- The tool is suitable for learners of all ages and can be used in various educational settings, including classrooms and self-study. -->
-<!-- The design is responsive, ensuring a good experience on both desktop and mobile devices. -->
-<!-- The tool can be expanded with additional features, such as quizzes, flashcards, and progress tracking, to further enhance the learning experience. -->
-<!-- The code is modular and can be easily maintained or updated with new lessons and features as needed. -->
-<!-- The tool is a valuable resource for anyone looking to improve their Danish language skills in an engaging and interactive way. -->
-<!-- The project can be further developed by adding user accounts, saving progress, and providing personalized feedback based on performance. -->
-<!-- The tool can also be integrated with other language learning platforms or resources to provide a comprehensive learning experience. -->
-<!-- The Danish Learning Tool is a great example of how technology can be used to facilitate language learning and make it more accessible to a wider audience. -->
-<!-- The project can be shared with educators and language learners to promote its use in classrooms and language courses. -->
-<!-- The tool can be adapted for other languages, making it a versatile resource for language education. -->
-<!-- The Danish Learning Tool is a great starting point for anyone interested in learning Danish or improving their language skills. -->
-<!-- The project can be further enhanced with user feedback and suggestions to improve the learning experience. -->
-<!-- The tool can be used as a standalone application or integrated into existing language learning platforms. -->
