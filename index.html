@@ -24,6 +24,9 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       max-width: 800px;
     }
+    .question {
+      margin-bottom: 20px;
+    }
     .sentence-container {
       display: flex;
       align-items: center;
@@ -77,15 +80,36 @@
 <body>
   <h1>Danish Learning Tool</h1>
 
-  <div class="assessment">
-    <h2>Start Assessment</h2>
-    <p>Choose your current Danish level:</p>
-    <select id="levelSelect">
-      <option value="A1">Beginner (A1)</option>
-      <option value="A2">Elementary (A2)</option>
-      <option value="B1">Intermediate (B1)</option>
-    </select>
-    <button onclick="loadLesson()">Load Lesson</button>
+  <div class="assessment" id="assessment">
+    <h2>Danish Level Quiz</h2>
+    <div class="question">
+      <p>1. What does "Hej" mean in English?</p>
+      <select id="q1">
+        <option value="">--Choose--</option>
+        <option value="Hi">Hi</option>
+        <option value="Bye">Bye</option>
+        <option value="Thanks">Thanks</option>
+      </select>
+    </div>
+    <div class="question">
+      <p>2. What does "Hvordan har du det?" mean?</p>
+      <select id="q2">
+        <option value="">--Choose--</option>
+        <option value="What is your name?">What is your name?</option>
+        <option value="How are you?">How are you?</option>
+        <option value="Where are you from?">Where are you from?</option>
+      </select>
+    </div>
+    <div class="question">
+      <p>3. What is "I am learning Danish" in Danish?</p>
+      <select id="q3">
+        <option value="">--Choose--</option>
+        <option value="Jeg lærer dansk">Jeg lærer dansk</option>
+        <option value="Jeg snakker engelsk">Jeg snakker engelsk</option>
+        <option value="Jeg går i skole">Jeg går i skole</option>
+      </select>
+    </div>
+    <button onclick="evaluateQuiz()">Submit Quiz</button>
   </div>
 
   <div class="lesson" id="lessonContainer" style="display:none;">
@@ -117,8 +141,20 @@
       ]
     };
 
-    function loadLesson() {
-      const level = document.getElementById('levelSelect').value;
+    function evaluateQuiz() {
+      const a1 = document.getElementById('q1').value === 'Hi';
+      const a2 = document.getElementById('q2').value === 'How are you?';
+      const a3 = document.getElementById('q3').value === 'Jeg lærer dansk';
+      let score = [a1, a2, a3].filter(Boolean).length;
+      let level = 'A1';
+      if (score === 3) level = 'B1';
+      else if (score === 2) level = 'A2';
+
+      document.getElementById('assessment').style.display = 'none';
+      loadLesson(level);
+    }
+
+    function loadLesson(level) {
       const storyContainer = document.getElementById('story');
       storyContainer.innerHTML = '';
 
