@@ -16,7 +16,22 @@
       text-align: center;
       color: #2c3e50;
     }
-    .assessment, .lesson, .game {
+    nav {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    nav button {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .assessment, .lesson, .game, .comprehension {
+      display: none;
       margin: 20px auto;
       padding: 20px;
       background-color: #ffffff;
@@ -27,45 +42,13 @@
     .question {
       margin-bottom: 20px;
     }
-    .sentence-container {
-      display: flex;
-      align-items: center;
+    .comprehension-text {
+      font-size: 1.1rem;
       margin-bottom: 10px;
     }
-    .sentence {
-      flex-grow: 1;
-      margin: 0;
-    }
-    .speak-btn {
-      margin-left: 10px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1.2rem;
-    }
-    .sortable {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 10px;
-      border: 1px dashed #aaa;
-      min-height: 40px;
-      background-color: #fafafa;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-    .sortable div, .match-word {
-      background-color: #e0f7fa;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: grab;
-    }
-    .feedback {
-      font-size: 1.5rem;
+    .options {
       margin-bottom: 20px;
     }
-    .correct { color: green; }
-    .incorrect { color: red; }
     .submit-btn {
       background-color: #3498db;
       color: white;
@@ -75,20 +58,12 @@
       cursor: pointer;
       margin-bottom: 20px;
     }
-    .match-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
+    .feedback {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
     }
-    .dropzone {
-      border: 2px dashed #ccc;
-      padding: 10px;
-      min-width: 100px;
-      min-height: 30px;
-      border-radius: 6px;
-      background-color: #f9f9f9;
-    }
+    .correct { color: green; }
+    .incorrect { color: red; }
     #restartBtn {
       display: block;
       margin: 0 auto;
@@ -100,10 +75,21 @@
       border-radius: 10px;
       cursor: pointer;
     }
+    .score-tracker {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>Danish Learning Tool</h1>
+
+  <nav>
+    <button onclick="showTab('assessment')">Level Quiz</button>
+    <button onclick="showTab('lessonContainer')">Short Story</button>
+    <button onclick="showTab('nextGame')">Vocab Game</button>
+    <button onclick="showTab('comprehension')">Comprehension Activity</button>
+  </nav>
 
   <div class="assessment" id="assessment">
     <h2>Danish Level Quiz</h2>
@@ -135,14 +121,15 @@
       </select>
     </div>
     <button onclick="evaluateQuiz()">Submit Quiz</button>
+    <div class="score-tracker" id="quizScore"></div>
   </div>
 
-  <div class="lesson" id="lessonContainer" style="display:none;">
+  <div class="lesson" id="lessonContainer">
     <h2>Danish Short Story</h2>
     <div id="story"></div>
   </div>
 
-  <div class="game" id="nextGame" style="display:none;">
+  <div class="game" id="nextGame">
     <h2>Next Game: Vocabulary Matching</h2>
     <p>Drag the correct English translation to each Danish word:</p>
     <div id="vocabGame"></div>
@@ -150,10 +137,44 @@
     <button class="submit-btn" onclick="checkVocabMatch()">Submit</button>
   </div>
 
+  <div class="comprehension" id="comprehension">
+    <h2>Comprehension Activity</h2>
+    <div class="score-tracker" id="compScore">Score: 0</div>
+    <div class="comprehension-text" id="compText">Hun hedder Anna. Hun bor i København.</div>
+    <button class="speak-btn" onclick="speakText('Hun hedder Anna. Hun bor i København.')">🔊</button>
+    <div class="options">
+      <p>What is her name?</p>
+      <select id="compQ1">
+        <option value="">--Choose--</option>
+        <option value="Anna">Anna</option>
+        <option value="Peter">Peter</option>
+        <option value="Marie">Marie</option>
+      </select>
+    </div>
+    <button class="submit-btn" onclick="checkComprehension()">Submit Answer</button>
+    <div class="feedback" id="compFeedback"></div>
+  </div>
+
   <button id="restartBtn" style="display:none;" onclick="restartQuiz()">🔁 Restart Quiz</button>
 
   <script>
-    // ... (existing script code unchanged)
+    let compCorrect = 0;
+
+    function showTab(tabId) {
+      document.querySelectorAll('.assessment, .lesson, .game, .comprehension').forEach(el => el.style.display = 'none');
+      document.getElementById(tabId).style.display = 'block';
+      if (tabId === 'lessonContainer') {
+        loadStory();
+      }
+    }
+
+    function evaluateQuiz() {
+      let score = 0;
+      if (document.getElementById('q1').value === 'Hi') score++;
+      if (document.getElementById('q2').value === 'How are you?') score++;
+      if (document.getElementById('q3').value === 'Jeg lærer dansk') score++;
+      document.getElementById('quizScore').textContent = `Correct answers: ${score}/3`;
+    }
 
     function checkVocabMatch() {
       const zones = document.querySelectorAll('.dropzone');
@@ -174,14 +195,72 @@
       }
     }
 
+    function checkComprehension() {
+      const answer = document.getElementById('compQ1').value;
+      const feedback = document.getElementById('compFeedback');
+      const scoreDisplay = document.getElementById('compScore');
+      if (answer === 'Anna') {
+        feedback.textContent = '✅ Correct!';
+        feedback.className = 'feedback correct';
+        compCorrect++;
+        scoreDisplay.textContent = `Score: ${compCorrect}`;
+        setTimeout(() => loadNextComprehension(), 1500);
+      } else {
+        feedback.textContent = '❌ Incorrect. Try again!';
+        feedback.className = 'feedback incorrect';
+      }
+    }
+
+    function loadNextComprehension() {
+      document.getElementById('compText').textContent = 'Han hedder Peter. Han arbejder som lærer.';
+      document.querySelector('.speak-btn').setAttribute('onclick', "speakText('Han hedder Peter. Han arbejder som lærer.')");
+      document.querySelector('.options p').textContent = 'What is his name?';
+      const select = document.getElementById('compQ1');
+      select.innerHTML = `
+        <option value="">--Choose--</option>
+        <option value="Anna">Anna</option>
+        <option value="Peter">Peter</option>
+        <option value="Marie">Marie</option>
+      `;
+      document.getElementById('compFeedback').textContent = '';
+    }
+
+    function speakText(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'da-DK';
+      speechSynthesis.speak(utterance);
+    }
+
     function restartQuiz() {
       document.getElementById('assessment').style.display = 'block';
       document.getElementById('lessonContainer').style.display = 'none';
       document.getElementById('nextGame').style.display = 'none';
+      document.getElementById('comprehension').style.display = 'none';
       document.getElementById('restartBtn').style.display = 'none';
       document.getElementById('q1').value = '';
       document.getElementById('q2').value = '';
       document.getElementById('q3').value = '';
+      document.getElementById('quizScore').textContent = '';
+      document.getElementById('compQ1').value = '';
+      document.getElementById('compFeedback').textContent = '';
+      document.getElementById('compScore').textContent = 'Score: 0';
+      compCorrect = 0;
+      document.getElementById('compText').textContent = 'Hun hedder Anna. Hun bor i København.';
+      document.querySelector('.speak-btn').setAttribute('onclick', "speakText('Hun hedder Anna. Hun bor i København.')");
+      document.querySelector('.options p').textContent = 'What is her name?';
+      const select = document.getElementById('compQ1');
+      select.innerHTML = `
+        <option value="">--Choose--</option>
+        <option value="Anna">Anna</option>
+        <option value="Peter">Peter</option>
+        <option value="Marie">Marie</option>
+      `;
+    }
+
+    function loadStory() {
+      const storyText = `Lise bor i Aarhus. Hun elsker at cykle til arbejde. Hver morgen spiser hun havregrød og drikker kaffe. På arbejdet snakker hun med sine kollegaer og arbejder ved computeren. Om aftenen læser hun en bog eller ser en film.`;
+      const storyDiv = document.getElementById('story');
+      storyDiv.textContent = storyText;
     }
   </script>
 </body>
