@@ -49,12 +49,28 @@
       min-height: 40px;
       background-color: #fafafa;
       border-radius: 8px;
+      margin-bottom: 10px;
     }
     .sortable div {
       background-color: #e0f7fa;
       padding: 8px 12px;
       border-radius: 6px;
       cursor: grab;
+    }
+    .feedback {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+    .correct { color: green; }
+    .incorrect { color: red; }
+    .submit-btn {
+      background-color: #3498db;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -75,6 +91,11 @@
   <div class="lesson" id="lessonContainer" style="display:none;">
     <h2>Danish Short Story</h2>
     <div id="story"></div>
+  </div>
+
+  <div class="game" id="nextGame" style="display:none;">
+    <h2>Next Game: Vocabulary Matching (Coming Soon)</h2>
+    <p>This game will help you learn new vocabulary words with interactive drag-and-drop matching.</p>
   </div>
 
   <script>
@@ -104,8 +125,9 @@
       const lesson = lessons[level];
       document.getElementById('lessonContainer').style.display = 'block';
 
-      lesson.forEach(({ danish, english }) => {
-        // Sentence + button
+      let completed = 0;
+
+      lesson.forEach(({ danish, english }, index) => {
         const container = document.createElement('div');
         container.className = 'sentence-container';
 
@@ -122,10 +144,9 @@
         container.appendChild(button);
         storyContainer.appendChild(container);
 
-        // Sorting Game
         const sortable = document.createElement('div');
         sortable.className = 'sortable';
-        sortable.setAttribute('draggable', 'true');
+        sortable.setAttribute('data-answer', english);
 
         const words = english.split(' ');
         const shuffled = [...words].sort(() => 0.5 - Math.random());
@@ -148,6 +169,29 @@
         });
 
         storyContainer.appendChild(sortable);
+
+        const feedback = document.createElement('div');
+        feedback.className = 'feedback';
+        storyContainer.appendChild(feedback);
+
+        const submitBtn = document.createElement('button');
+        submitBtn.className = 'submit-btn';
+        submitBtn.textContent = 'Submit';
+        submitBtn.onclick = () => {
+          const userAnswer = [...sortable.children].map(el => el.textContent).join(' ');
+          if (userAnswer === english) {
+            feedback.innerHTML = '✅ Correct!';
+            feedback.className = 'feedback correct';
+            completed++;
+            if (completed === lesson.length) {
+              document.getElementById('nextGame').style.display = 'block';
+            }
+          } else {
+            feedback.innerHTML = '❌ Try again!';
+            feedback.className = 'feedback incorrect';
+          }
+        };
+        storyContainer.appendChild(submitBtn);
       });
     }
 
