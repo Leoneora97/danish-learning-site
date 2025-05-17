@@ -54,7 +54,7 @@
       border-radius: 8px;
       margin-bottom: 10px;
     }
-    .sortable div {
+    .sortable div, .match-word {
       background-color: #e0f7fa;
       padding: 8px 12px;
       border-radius: 6px;
@@ -74,6 +74,20 @@
       border-radius: 8px;
       cursor: pointer;
       margin-bottom: 20px;
+    }
+    .match-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .dropzone {
+      border: 2px dashed #ccc;
+      padding: 10px;
+      min-width: 100px;
+      min-height: 30px;
+      border-radius: 6px;
+      background-color: #f9f9f9;
     }
   </style>
 </head>
@@ -118,8 +132,11 @@
   </div>
 
   <div class="game" id="nextGame" style="display:none;">
-    <h2>Next Game: Vocabulary Matching (Coming Soon)</h2>
-    <p>This game will help you learn new vocabulary words with interactive drag-and-drop matching.</p>
+    <h2>Next Game: Vocabulary Matching</h2>
+    <p>Drag the correct English translation to each Danish word:</p>
+    <div id="vocabGame"></div>
+    <div class="feedback" id="vocabFeedback"></div>
+    <button class="submit-btn" onclick="checkVocabMatch()">Submit</button>
   </div>
 
   <script>
@@ -184,6 +201,7 @@
         sortable.className = 'sortable';
         sortable.setAttribute('data-answer', english);
 
+        let draggedEl = null;
         const words = english.split(' ');
         const shuffled = [...words].sort(() => 0.5 - Math.random());
 
@@ -191,16 +209,30 @@
           const w = document.createElement('div');
           w.textContent = word;
           w.draggable = true;
-          w.ondragstart = e => e.dataTransfer.setData('text/plain', e.target.textContent);
-          w.ondrop = e => {
+
+          w.addEventListener('dragstart', () => {
+            draggedEl = w;
+            setTimeout(() => w.style.visibility = 'hidden', 0);
+          });
+
+          w.addEventListener('dragend', () => {
+            setTimeout(() => {
+              draggedEl.style.visibility = 'visible';
+              draggedEl = null;
+            }, 0);
+          });
+
+          w.addEventListener('dragover', e => e.preventDefault());
+
+          w.addEventListener('drop', e => {
             e.preventDefault();
-            const draggedText = e.dataTransfer.getData('text/plain');
-            const currentText = e.target.textContent;
-            e.target.textContent = draggedText;
-            const dragEl = [...sortable.children].find(el => el.textContent === draggedText && el !== e.target);
-            if (dragEl) dragEl.textContent = currentText;
-          };
-          w.ondragover = e => e.preventDefault();
+            if (draggedEl && draggedEl !== w) {
+              const draggedText = draggedEl.textContent;
+              draggedEl.textContent = w.textContent;
+              w.textContent = draggedText;
+            }
+          });
+
           sortable.appendChild(w);
         });
 
@@ -221,6 +253,7 @@
             completed++;
             if (completed === lesson.length) {
               document.getElementById('nextGame').style.display = 'block';
+              loadVocabGame();
             }
           } else {
             feedback.innerHTML = '❌ Try again!';
@@ -229,6 +262,73 @@
         };
         storyContainer.appendChild(submitBtn);
       });
+    }
+
+    function loadVocabGame() {
+      const vocab = [
+        { danish: 'bog', english: 'book' },
+        { danish: 'kaffe', english: 'coffee' },
+        { danish: 'lærer', english: 'teacher' },
+      ];
+
+      const gameContainer = document.getElementById('vocabGame');
+      gameContainer.innerHTML = '';
+
+      const shuffled = [...vocab].sort(() => 0.5 - Math.random());
+
+      shuffled.forEach(pair => {
+        const container = document.createElement('div');
+        container.className = 'match-container';
+
+        const word = document.createElement('div');
+        word.textContent = pair.danish;
+        word.className = 'match-word';
+
+        const dropzone = document.createElement('div');
+        dropzone.className = 'dropzone';
+        dropzone.setAttribute('data-answer', pair.english);
+
+        dropzone.addEventListener('dragover', e => e.preventDefault());
+        dropzone.addEventListener('drop', e => {
+          e.preventDefault();
+          const data = e.dataTransfer.getData('text');
+          dropzone.textContent = data;
+        });
+
+        container.appendChild(word);
+        container.appendChild(dropzone);
+        gameContainer.appendChild(container);
+      });
+
+      // draggable options
+      vocab.forEach(pair => {
+        const opt = document.createElement('div');
+        opt.textContent = pair.english;
+        opt.className = 'match-word';
+        opt.draggable = true;
+        opt.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text', opt.textContent);
+        });
+        gameContainer.appendChild(opt);
+      });
+    }
+
+    function checkVocabMatch() {
+      const zones = document.querySelectorAll('.dropzone');
+      let correct = 0;
+      zones.forEach(zone => {
+        if (zone.textContent.trim().toLowerCase() === zone.dataset.answer.toLowerCase()) {
+          correct++;
+        }
+      });
+      const feedback = document.getElementById('vocabFeedback');
+      if (correct === zones.length) {
+        feedback.textContent = '✅ All correct! Great job!';
+        feedback.className = 'feedback correct';
+      } else {
+        feedback.textContent = '❌ Some are incorrect. Try again!';
+        feedback.className = 'feedback incorrect';
+      }
     }
 
     function speakDanish(text) {
